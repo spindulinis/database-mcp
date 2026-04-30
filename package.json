@@ -1,0 +1,23 @@
+{
+  "name": "database-mcp",
+  "version": "0.0.1",
+  "type": "module",
+  "private": true,
+  "description": "MCP server exposing database to AI via configurable environment variables.",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.10.2",
+    "mssql": "^11.0.1"
+  },
+  "devDependencies": {
+    "@types/mssql": "^9.1.5",
+    "@types/node": "^20.11.17",
+    "tsx": "^4.7.0",
+    "typescript": "^5.6.3"
+  }
+}
