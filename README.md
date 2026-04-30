@@ -24,7 +24,7 @@ Copy `.env.example` to `.env` and fill in the values.
 cp .env.example .env
 ```
 
-Then register the server in `.claude/settings.json`
+Then register the server in your local `.claude/settings.json`
 
 ```json
 {
@@ -32,8 +32,10 @@ Then register the server in `.claude/settings.json`
     "database-mcp": {
       "command": "node",
       "args": [
+        "--env-file=.env",
         "/path/to/database-mcp/dist/index.js"
-      ]
+      ],
+      "cwd": "/path/to/database-mcp"
     }
   },
   "enableAllProjectMcpServer": true
@@ -42,11 +44,11 @@ Then register the server in `.claude/settings.json`
 
 ## Tools
 
-| Tool             | Description                         |
-|------------------|-------------------------------------|
-| `list-tables`    | Lists all tables in the database    |
-| `describe_table` | Shows columns and types for a table |
-| `query`          | Runs a read-only `SELECT` statment  |
+| Tool             | Description                              |
+|------------------|------------------------------------------|
+| `list_tables`    | Lists all tables in the database         |
+| `describe_table` | Shows columns and types for a table      |
+| `execute_select` | Runs a read-only `SELECT` statement      |
 
 ## Setup
 
