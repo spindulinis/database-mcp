@@ -1,11 +1,11 @@
-import sql from 'mssql';
+import mysql from 'mysql2/promise';
 import { DB_CONFIG } from './config.js';
 
-let pool: sql.ConnectionPool | null = null;
+let pool: mysql.Pool | null = null;
 
-export async function getPool(): Promise<sql.ConnectionPool> {
-  if (!pool || !pool.connected) {
-    pool = await sql.connect(DB_CONFIG);
+export function getPool(): mysql.Pool {
+  if (!pool) {
+    pool = mysql.createPool(DB_CONFIG);
   }
   return pool;
 }

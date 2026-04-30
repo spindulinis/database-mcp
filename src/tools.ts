@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import sql from "mssql";
+import mysql from 'mysql2/promise';
 import { getPool } from "./db.js";
 
 type ToolResponse = {
@@ -24,9 +24,9 @@ function err(message: string): ToolResponse {
   };
 }
 
-async function withDb<T>(fn: (db: sql.ConnectionPool) => Promise<T>): Promise<ToolResponse> {
+async function withDb<T>(fn: (db: mysql.Pool) => Promise<T>): Promise<ToolResponse> {
   try {
-    const pool = await getPool();
+    const pool = getPool();
     const result = await fn(pool);
     return ok(result);
   } catch (error: any) {
@@ -41,14 +41,14 @@ export function registerTools(server: McpServer) {
       description: "List all tables in the database",
     },
     async () => withDb(async (db) => {
-      const result = await db.request().query(`
+      const [rows] = await db.query<mysql.RowDataPacket[]>(`
         SELECT TABLE_NAME, TABLE_SCHEMA
         FROM INFORMATION_SCHEMA.TABLES
-        WHERE TABLE_TYPE = 'BASE TABLE'
-        ORDER BY TABLE_SCHEMA, TABLE_NAME
+        WHERE TABLE_TYPE = 'BASE TABLE' AND TABLE_SCHEMA = DATABASE()
+        ORDER BY TABLE_NAME
       `);
-      
-      const tables = result.recordset.map(row => `${row.TABLE_SCHEMA}.${row.TABLE_NAME}`);
+
+      const tables = rows.map(row => `${row.TABLE_SCHEMA}.${row.TABLE_NAME}`);
       return tables.length > 0 ? tables.join("\n") : "No tables found.";
     })
   );
@@ -62,32 +62,34 @@ export function registerTools(server: McpServer) {
       },
     },
     async ({ tableName }: { tableName: string }) => withDb(async (db) => {
-      let schema = 'dbo';
-      let table = tableName;
-      
+      let schema: string;
+      let table: string;
+
       if (tableName.includes('.')) {
         [schema, table] = tableName.split('.');
+      } else {
+        const [dbRows] = await db.query<mysql.RowDataPacket[]>('SELECT DATABASE() AS db');
+        schema = dbRows[0].db;
+        table = tableName;
       }
 
-      const result = await db.request()
-        .input('schema', schema)
-        .input('table', table)
-        .query(`
-          SELECT 
-            COLUMN_NAME, 
-            DATA_TYPE, 
-            CHARACTER_MAXIMUM_LENGTH, 
-            IS_NULLABLE
-          FROM INFORMATION_SCHEMA.COLUMNS
-          WHERE TABLE_SCHEMA = @schema AND TABLE_NAME = @table
-          ORDER BY ORDINAL_POSITION
-        `);
+      const [rows] = await db.query<mysql.RowDataPacket[]>(
+        `SELECT
+           COLUMN_NAME,
+           DATA_TYPE,
+           CHARACTER_MAXIMUM_LENGTH,
+           IS_NULLABLE
+         FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?
+         ORDER BY ORDINAL_POSITION`,
+        [schema, table]
+      );
 
-      if (result.recordset.length === 0) {
+      if (rows.length === 0) {
         throw new Error(`Table ${tableName} not found.`);
       }
 
-      const description = result.recordset.map(col => 
+      const description = rows.map(col =>
         `${col.COLUMN_NAME} (${col.DATA_TYPE}${col.CHARACTER_MAXIMUM_LENGTH ? `(${col.CHARACTER_MAXIMUM_LENGTH})` : ''})${col.IS_NULLABLE === 'YES' ? ' NULL' : ' NOT NULL'}`
       ).join("\n");
 
@@ -110,8 +112,8 @@ export function registerTools(server: McpServer) {
       }
 
       return withDb(async (db) => {
-        const result = await db.request().query(trimmedQuery);
-        return result.recordset;
+        const [rows] = await db.query<mysql.RowDataPacket[]>(trimmedQuery);
+        return rows;
       });
     }
   );

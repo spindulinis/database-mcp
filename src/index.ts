@@ -3,7 +3,7 @@ import { DB_CONFIG } from './config.js';
 import { registerTools } from './tools.js';
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 
-const { database: dbName, server: dbServer, port: dbPort } = DB_CONFIG;
+const { database: dbName, host: dbServer, port: dbPort } = DB_CONFIG;
 
 const server = new McpServer({
   name: 'database-mcp',
